@@ -10,7 +10,7 @@ end
 % lhatp = f(kp, Zp, Z, Z1, Z2, Z3, Pp, phi);
 % rhatp = g(kp, Zp, Z, Z1, Z2, Z3, Pp, phi);
 % rhatp = phi^LAMBDAphi .* (1 ./ Pp) .* ALFA .* Zp .* kp^(ALFA - 1) * lhatp ^ (1 - ALFA);
-rhatp = big_R(kp, lhatp, Pp, Zp, ALFA, DELTA, decision_func_to_use(dec_phi_hat, [kp, Zp, Z, Z1, Z2, Pp, phi, phi_tminus1, P], ssvals_stage1, sigma_Z, sigma_P)); %phihatp);
+rhatp = big_R(kp, lhatp, Pp, Zp, ALFA, DELTA, phihatp);
 
 up = subs(u,[c l],[cp lhatp]);
 dupdcp = jacobian(up,cp);
@@ -30,15 +30,15 @@ f8 = Z3p - Z2;
 f10 = dudc - BETTA * subs(dupdcp, cp, G*cp) * G * (stockp + ((Pp-1)/Pp)*y_func(kp, lhatp, Zp, ALFA, phip))/stock;
 % f11 = risky_r_ - big_R(k,l,P,Z,ALFA,DELTA);
 f_phi_AR = phip - phi_transition(phi, phi_tminus1, Pp, P, LAMBDAphi, LAMBDAphi_lagged, phi_reg_intercept, LAMBDAphi_theta, LAMBDAphi_lagtheta, 0);
-% f_phihat = phihatp - decision_func_to_use(dec_phi_hat, [kp, Zp, Z, Z1, Z2, Pp, phi, phi_tminus1, P], ssvals_stage1, sigma_Z, sigma_P);
+f_phihat = phihatp - decision_func_to_use(dec_phi_hat, [kp, Zp, Z, Z1, Z2, Pp, phi, phi_tminus1, P], ssvals_stage1, sigma_Z, sigma_P);
 f_lhat = lhatp - decision_func_to_use(dec_l_hat, [kp, Zp, Z, Z1, Z2, Pp, phi, phi_tminus1, P], ssvals_stage1, sigma_Z, sigma_P);
 f_phi_lag = phi_tminus1p - phi;
 
-f = [f1;f2;f4;f5;f6;f7;f8;f10;f_phi_AR;f_lhat;f_phi_lag]; %f_phihat;
+f = [f1;f2;f4;f5;f6;f7;f8;f10;f_phi_AR;f_phihat;f_lhat;f_phi_lag];
 
 x = [k Z Z1 Z2 Z3 P phi phi_tminus1 lhat];
-y = [c stock];% phihat];
+y = [c stock phihat];
 xp = [kp Zp Z1p Z2p Z3p Pp phip phi_tminus1p lhatp];
-yp = [cp stockp];% phihatp];
+yp = [cp stockp phihatp];
 
 [fx,fxp,fy,fyp,fypyp,fypy,fypxp,fypx,fyyp,fyy,fyxp,fyx,fxpyp,fxpy,fxpxp,fxpx,fxyp,fxy,fxxp,fxx]=anal_deriv(f,x,y,xp,yp);
