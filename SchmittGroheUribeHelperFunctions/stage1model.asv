@@ -12,12 +12,10 @@ up = subs(u,[c l],[cp lp]);
 dupdcp = jacobian(up,cp);
 dudc = jacobian(u,c);
 
-
-phi_t = phi_func([Psi1_tminus1p, Psi2_tminus1p, Psi3_tminus1p, Psi4_tminus1p, Psi5_tminus1p], P / (P - 1));
-phihatp = phi_func([Psi1_tminus1p ^ LAMBDAPsi1, Psi2_tminus1p ^ LAMBDAPsi2, Psi3_tminus1p ^ LAMBDAPsi3, Psi4_tminus1p ^ LAMBDAPsi4, Psi5_tminus1p ^ LAMBDAPsi5], Pp / (Pp - 1));
+phi_t = phi_func(Psi1_tminus1p, Psi2_tminus1p, Psi3_tminus1p, Psi4_tminus1p, Psi5_tminus1p);
 
 f1 = c + G*kp - (1-DELTA) * k - y_func(k, l, Z, ALFA, phi_t);
-f2 = dudc - BETTA * subs(dupdcp, cp, G*cp) * big_R(kp, lp, Pp, Zp, ALFA, DELTA, phihatp);
+f2 = dudc - BETTA * subs(dupdcp, cp, G*cp) * big_R(kp, lp, Pp, Zp, ALFA, DELTA, phi_t);
 f3 = laborsupply(u) + w_func(k, l, P, Z, ALFA, phi_t);
 f4 = Zp - Z^LAMBDAZ;
 f5 = Pp - P_func(G, P, LAMBDAP, Zp, Z, Z1, Z2, Z3, MU, 0) - log(1 + exp(-100*  (P_func(G, P, LAMBDAP, Zp, Z, Z1, Z2, Z3, MU, 0) - 1)))/100;
@@ -25,17 +23,14 @@ f6 = Z1p - Z;
 f7 = Z2p - Z1;
 f8 = Z3p - Z2;
 %use this for stage 2 rt+1 f9 = phihat - phi_t;
-f_Psi1 = Psi1_tminus1p - Psi1_tminus1^LAMBDAPsi1;
-f_Psi2 = Psi2_tminus1p - Psi2_tminus1^LAMBDAPsi2;
-f_Psi3 = Psi3_tminus1p - Psi3_tminus1^LAMBDAPsi3;
-f_Psi4 = Psi4_tminus1p - Psi4_tminus1^LAMBDAPsi4;
-f_Psi5 = Psi5_tminus1p - Psi5_tminus1^LAMBDAPsi5;
+f_Psi1 = Psi1_tminus1 - Psi1_tminus1^LAMBDApsi1;
+f_Psi2 = Psi2_tminus1 - Psi2_tminus1^LAMBDApsi2;
 
 
-f = [f1;f2;f3;f4;f5;f6;f7;f8;f_Psi1;f_Psi2;f_Psi3;f_Psi4;f_Psi5];
+f = [f1;f2;f3;f4;f5;f6;f7;f8];
 
 x = [k Z Z1 Z2 Z3 P Psi1_tminus1 Psi2_tminus1 Psi3_tminus1 Psi4_tminus1 Psi5_tminus1];
-y = [l c]; %phihat
+y = [l c];
 xp = [kp Zp Z1p Z2p Z3p Pp Psi1_tminus1p Psi2_tminus1p Psi3_tminus1p Psi4_tminus1p Psi5_tminus1p];
 yp = [lp cp];
 

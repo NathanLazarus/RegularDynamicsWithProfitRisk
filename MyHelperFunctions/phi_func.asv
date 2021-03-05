@@ -1,0 +1,2 @@
+function phi = phi_func(psis, theta)
+sum(psis) .^ 

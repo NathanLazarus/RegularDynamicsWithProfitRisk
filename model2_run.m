@@ -1,4 +1,6 @@
-function [rgwkcl_mat] = model2_run(DELTA,ALFA,BETTA,G,SIGM,LAMBDAP,LAMBDAZ,LAMBDAphi,phi_reg_intercept,LAMBDAphi_lagged,LAMBDAphi_theta, LAMBDAphi_lagtheta,sigma_Z,sigma_P,MU,FRISCHELAS,STEADYSTATEL,T,shock,k0_mult,MultiplicativeU,startopposite,regimechanges,regime_change_frequency,randomseq,order)
+function [rgwkcl_mat] = model2_run(DELTA,ALFA,BETTA,G,SIGM,LAMBDAP,LAMBDAZ,...
+    sigma_Z,sigma_P,MU,FRISCHELAS,STEADYSTATEL,T,shock,k0_mult,MultiplicativeU,...
+    startopposite,regimechanges,regime_change_frequency,randomseq,order)
 
 % clear all
 
@@ -8,20 +10,32 @@ hardcode_irf_T = 100;
 use_SchmittGrohe_Uribe_Matlab_code_to_find_coefficients = true;
 
 defaults = {0.08,0.32,0.98,1.014,...
-    0.9,0.95,0.92,0.8775,0.044,...
-    0.076,1.092,-0.96, 0.011,...
-    0.03,0,0.086,0.5,0.3,...
+    0.9,0.95,0.92, 0.017,...
+    0.03,0.086,0.5,0.3,...
     200,"historical",1,0,...
     1,0,50,2,4};
 
 var = ["DELTA","ALFA","BETTA","G",...
-    "SIGM","LAMBDAP","LAMBDAZ","LAMBDAphi", "LAMBDAphi_lagged",...
-    "phi_reg_intercept", "LAMBDAphi_theta", "LAMBDAphi_lagtheta","sigma_Z",...
-    "sigma_P","sigma_phi","MU","FRISCHELAS","STEADYSTATEL",...
+    "SIGM","LAMBDAP","LAMBDAZ","sigma_Z",...
+    "sigma_P","MU","FRISCHELAS","STEADYSTATEL",...
     "T","shock","k0_mult","MultiplicativeU",...
     "startopposite","regimechanges","regime_change_frequency","randomseq","order"];
 
+% Psi_AR_coefs = [0.7,0.75,0.8,0.85,0.9];
+Psi_AR_coefs = readmatrix("C:/Users/Nathan/Downloads/Compustat/five_largest_firms_AR_coefs.csv");
 
+LAMBDAPsi1 = Psi_AR_coefs(1);
+LAMBDAPsi2 = Psi_AR_coefs(2);
+LAMBDAPsi3 = Psi_AR_coefs(3);
+LAMBDAPsi4 = Psi_AR_coefs(4);
+LAMBDAPsi5 = Psi_AR_coefs(5);
+
+% Psi_vcov = diag([0.1,0.15,0.22,0.25,0.28]); %[0.1,0,0,0,0;];
+Psi_vcov = readmatrix("C:/Users/Nathan/Downloads/Compustat/five_largest_firms_vcov.csv");
+% Psi_vcov = zeros([5 5]);
+
+n_Psis = size(Psi_vcov, 1);
+PSISTAR = 1;
 
 for i = 1:length(defaults)
     if ~exist(var{i},"var")
@@ -67,7 +81,9 @@ end
 
 ZSTAR = 1; %steady-state value of technology shock 
 PSTAR = G^(1/(1-LAMBDAP)); %steady state markup
-PHISTAR = (exp(phi_reg_intercept)) ^ (1 / (1 - LAMBDAphi - LAMBDAphi_lagged)); % * (PSTAR / (PSTAR - 1)) ^ (LAMBDAphi_theta + LAMBDAphi_lagtheta)
+THETASTAR = PSTAR / (PSTAR - 1);
+PSISTARS = zeros([1 n_Psis]) + PSISTAR;
+PHISTAR = phi_func(PSISTARS, THETASTAR);
 
 sym_labor_supply = laborsupply(u);
 intertemporal_euler_ss = dupdcp_over_dudc(u,1);
@@ -89,15 +105,13 @@ stockSTAR = G*((PSTAR-1)/PSTAR)*y_func(KSTAR,LSTAR,ZSTAR,ALFA,PHISTAR)/((1+RSTAR
 fprintf("{%.15g, %.15g, %.15g, %.15g, %.15g, %.15g, %d}\n",KSTAR,CSTAR,LSTAR,stockSTAR,GAMA,ETA,MultiplicativeU)
 % [KSTAR,CSTAR,LSTAR,WSTAR,RSTAR,GAMA,ETA]=model2_ss_numericsetGAMAandETA(DELTA,ALFA,BETTA,G,PSTAR,FRISCHELAS,STEADYSTATEL,SIGM,ZSTAR,sym_labor_supply,intertemporal_euler_ss,u)
 
-ssvals_stage1 = [KSTAR,ZSTAR,ZSTAR,ZSTAR,ZSTAR,PSTAR,PHISTAR,PHISTAR,PSTAR];
-ssvals_stage2 = [KSTAR,ZSTAR,ZSTAR,ZSTAR,ZSTAR,PSTAR,PHISTAR,PHISTAR,LSTAR];
+ssvals_stage1 = [KSTAR,ZSTAR,ZSTAR,ZSTAR,ZSTAR,PSTAR,PSISTARS];
+ssvals_stage2 = [ssvals_stage1, LSTAR];
 
 if startopposite
     PSTARopposite = G^(1/(1-LAMBDAPopposite));
-    [KSTARopposite,CSTARopposite,LSTARopposite,WSTARopposite,RSTARopposite]=model2_ss_numeric(1,0.3,0.3,DELTA,ALFA,BETTA,G,PSTARopposite,ETA,GAMA,SIGM,ZSTAR,PHISTAR,sym_labor_supply,intertemporal_euler_ss);
-    stockSTARopposite = G*((PSTARopposite-1)/PSTARopposite)*y_func(KSTARopposite,LSTARopposite,ZSTAR,ALFA,PHISTAR)/((1+RSTARopposite) - G);
+    [KSTARopposite,~,~,~,~]=model2_ss_numeric(1,0.3,0.3,DELTA,ALFA,BETTA,G,PSTARopposite,ETA,GAMA,SIGM,ZSTAR,PHISTAR,sym_labor_supply,intertemporal_euler_ss);
     k0_mult = KSTARopposite/KSTAR;
-    ssvalsopposite = [KSTARopposite,ZSTAR,ZSTAR,ZSTAR,ZSTAR,PSTARopposite,PHISTAR];
 end
 
 if string(shock) == "historical_postwar_trend"
@@ -111,6 +125,7 @@ else
 end
 
 
+
 get_coefs_SchmittGrohe_Uribe
 
 
@@ -122,7 +137,7 @@ if ~(string(shock) == "none"||string(shock) == "historical"|| string(shock) == "
 end
 
 rng(123142+randomseq,"twister");
-rho_phi = normrnd(0,sigma_phi,[1 T]);
+rho_Psis = mvnrnd(zeros([1 n_Psis]),Psi_vcov,T);
 
 rng(123140+randomseq,"twister");
 rho_P = normrnd(0,sigma_P,[1 T]);
@@ -176,37 +191,34 @@ if string(shock_character_vector(1:3)) == "irf"
     end
 end
 
-k_sim = zeros([1 T]) + KSTAR*k0_mult;
-Z_sim = zeros([1 T]) + ZSTAR;
-phi_sim = zeros([1 T]) + PHISTAR;
-phihat_sim = zeros([1 T]) + PHISTAR;
-P_sim = zeros([1 T]) + PSTAR;
+k_sim = zeros([T 1]) + KSTAR*k0_mult;
+Z_sim = zeros([T 1]) + ZSTAR;
+P_sim = zeros([T 1]) + PSTAR;
 if startopposite
-    P_sim = zeros([1 T]) + PSTARopposite;
+    P_sim = zeros([T 1]) + PSTARopposite;
 end
+Psis_sim = repmat(PSISTARS,T,1);
 
 
-c_sim = NaN([1 T]);
-l_sim = NaN([1 T]);
-stock_sim = NaN([1 T]);
+c_sim = NaN([T 1]);
+l_sim = NaN([T 1]);
+stock_sim = NaN([T 1]);
 
-state_vars_stage1 = repmat([k_sim(1),Z_sim(1),Z_sim(1),Z_sim(1),Z_sim(1),P_sim(1),phi_sim(1),phi_sim(1),P_sim(1)],T,1);
-state_vars_stage2 = repmat([k_sim(1),Z_sim(1),Z_sim(1),Z_sim(1),Z_sim(1),P_sim(1),phi_sim(1),phi_sim(1),l_sim(1)],T,1);
+state_vars_stage1 = [k_sim,Z_sim,Z_sim,Z_sim,Z_sim,P_sim,Psis_sim];
+state_vars_stage2 = [state_vars_stage1,l_sim];
 
 for i=1:T
     Z_sim(i)=Z_sim(max(i-1,1))^LAMBDAZ*exp(rho_Z(i));
-%     in_opposite_regime = mod(floor((i-1)/regime_change_frequency),2) == 1;
 
     P_sim(i) = P_func_greater_than_1(G,P_sim(max(i-1,1)),LAMBDAP,Z_sim(i),Z_sim(max(i-1,1)),Z_sim(max(i-2,1)),Z_sim(max(i-3,1)),Z_sim(max(i-4,1)),MU,rho_P(i));
-    
-    phi_sim(i) = phi_transition(phi_sim(max(i-1,1)), phi_sim(max(i-2,1)), P_sim(i), P_sim(max(i-1,1)), LAMBDAphi, LAMBDAphi_lagged, phi_reg_intercept, LAMBDAphi_theta, LAMBDAphi_lagtheta, rho_phi(i));
-    
-    state_vars_stage1(i,:) = [k_sim(i),Z_sim(i),Z_sim(max(i-1,1)),Z_sim(max(i-2,1)),Z_sim(max(i-3,1)),P_sim(i),phi_sim(max(i-1,1)),phi_sim(max(i-2,1)),P_sim(max(i-1,1))];
+        
+    state_vars_stage1(i,:) = [k_sim(i),Z_sim(i),Z_sim(max(i-1,1)),Z_sim(max(i-2,1)),Z_sim(max(i-3,1)),P_sim(i),Psis_sim(max(i-1,1),:)];
         
     l_sim(i) = decision_func_to_use(dec_l_hat,state_vars_stage1(i,:),ssvals_stage1,sigma_Z,sigma_P);
-    phihat_sim(i) = decision_func_to_use(dec_phi_hat,state_vars_stage1(i,:),ssvals_stage1,sigma_Z,sigma_P);
+    
+    Psis_sim(i,:) = Psis_sim(max(i-1,1),:) .^ Psi_AR_coefs .* exp(rho_Psis(i,:));
 
-    state_vars_stage2(i,:) = [k_sim(i),Z_sim(i),Z_sim(max(i-1,1)),Z_sim(max(i-2,1)),Z_sim(max(i-3,1)),P_sim(i),phi_sim(i),phi_sim(max(i-1,1)),l_sim(i)];
+    state_vars_stage2(i,:) = [state_vars_stage1(i,1:6),Psis_sim(i,:),l_sim(i)];
     
     c_sim(i)=decision_func_to_use(dec_c,state_vars_stage2(i,:),ssvals_stage2,sigma_Z,sigma_P);
     stock_sim(i)=decision_func_to_use(dec_stock,state_vars_stage2(i,:),ssvals_stage2,sigma_Z,sigma_P);
@@ -219,13 +231,16 @@ for i=1:T
     
 end
 
+theta_sim = P_sim ./ (P_sim - 1);
+phi_sim = phi_func(Psis_sim, theta_sim);
+phihat_sim = phi_func([PSISTARS;Psis_sim(1:T-1,:)] .^ [LAMBDAPsi1, LAMBDAPsi2, LAMBDAPsi3, LAMBDAPsi4, LAMBDAPsi5], P_sim ./ (P_sim - 1));
 w_sim = w_func(k_sim,l_sim,P_sim,Z_sim,ALFA,phihat_sim);
 r_sim = little_r(k_sim,l_sim,P_sim,Z_sim,ALFA,DELTA,phihat_sim);
 y_sim = y_func(k_sim,l_sim,Z_sim,ALFA,phi_sim);
-g_sim = [NaN,(G*y_sim(2:T)-y_sim(1:T-1))./y_sim(1:T-1)];
+g_sim = [NaN;(G*y_sim(2:T)-y_sim(1:T-1))./y_sim(1:T-1)];
 profits_sim = ((P_sim-1)./P_sim).*y_sim;
 
-rgwkcl_mat = [r_sim',g_sim',w_sim',k_sim',c_sim',l_sim',stock_sim',y_sim',phi_sim',phihat_sim',P_sim',Z_sim'];
+rgwkcl_mat = [r_sim,g_sim,w_sim,k_sim,c_sim,l_sim,stock_sim,y_sim,phi_sim,phihat_sim,P_sim,Z_sim];
 
 % if (string(shock) == "historical" || string(shock) == "historical_endogenous_P")
 %     rgwkcl_mat = rgwkcl_mat(5:37,:);

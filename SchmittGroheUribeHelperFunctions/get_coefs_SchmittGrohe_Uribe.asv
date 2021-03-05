@@ -3,18 +3,14 @@
 k=KSTAR; c=CSTAR; l=LSTAR; Z=ZSTAR; Z1 = ZSTAR; Z2 = ZSTAR; Z3 = ZSTAR; P = PSTAR;
 kp=k; cp=c; lp=l; Zp=Z; Z1p = Z; Z2p = Z; Z3p = Z; Pp = P; riskless_r_ = RSTAR;
 stockSTAR = G*((PSTAR-1)/PSTAR)*y_func(KSTAR,LSTAR,ZSTAR,ALFA,PHISTAR)/((1+RSTAR) - G); stock = stockSTAR; stockp = stockSTAR;
-risky_r_ = RSTAR; risky_rp_ = RSTAR; lhat = LSTAR; lhatp = lhat;
+risky_r_ = RSTAR; risky_rp_ = RSTAR;
 
-Psi1_tminus1 = PSISTARS(1);  Psi2_tminus1 = PSISTARS(2);  Psi3_tminus1 = PSISTARS(3);  Psi4_tminus1 = PSISTARS(4);  Psi5_tminus1 = PSISTARS(5);
-Psi1_tminus1p = PSISTARS(1); Psi2_tminus1p = PSISTARS(2); Psi3_tminus1p = PSISTARS(3); Psi4_tminus1p = PSISTARS(4); Psi5_tminus1p = PSISTARS(5);
+lhat = LSTAR; phi = PHISTAR;  phi_tminus1 = PHISTAR;      phi_tminus2 = PHISTAR;      phihat = PHISTAR; P_lag = PSTAR;
 
-Psi1 = PSISTARS(1);  Psi2 = PSISTARS(2);  Psi3 = PSISTARS(3);  Psi4 = PSISTARS(4);  Psi5 = PSISTARS(5);
-Psi1p = PSISTARS(1); Psi2p = PSISTARS(2); Psi3p = PSISTARS(3); Psi4p = PSISTARS(4); Psi5p = PSISTARS(5);
+lhatp = lhat; phip = PHISTAR; phi_tminus1p = phi_tminus1; phi_tminus2p = phi_tminus2; phihatp = phihat; P_lagp = PSTAR;
 
-eta_without_Psis = [0 0 0; 1 0 0; 0 0 0; 0 0 0; 0 0 0; 0 sigma_P/sigma_Z 0]; %Matrix defining driving force
-eta = zeros([6 + n_Psis 3 + n_Psis]);
-eta(1:6,1:3) = eta_without_Psis;
-eta(7:(6 + n_Psis), 4:(3 + n_Psis)) = Psi_vcov/sigma_Z;
+
+eta     = [0 0 0; 1 0 0; 0 0 0; 0 0 0; 0 0 0; 0 sigma_P/sigma_Z 0; 0 0 sigma_phi/sigma_Z; 0 0 0; 0 0 0]; %Matrix defining driving force
 
 flatten = @(A) A(:);
 
@@ -46,8 +42,11 @@ else
 end
 
 
-eta = [eta;zeros([1 size(eta,2)])]; %adding lhat state variable but removing P_lag
+eta_without_Psis = [0 0 0; 1 0 0; 0 0 0; 0 0 0; 0 0 0; 0 sigma_P/sigma_Z 0; 0 0 sigma_phi/sigma_Z; 0 0 0; 0 0 0];
 
+eta = [eta;zeros([1 size(eta,])]; %adding lhat state variable but removing P_lag
+eta = zeros([6 + n_Psis 3 + n_Psis]);
+eta(1:6,1:3) = eta_without_Psis
 
 [fx,fxp,fy,fyp,fypyp,fypy,fypxp,fypx,fyyp,fyy,fyxp,fyx,fxpyp,fxpy,fxpxp,fxpx,fxyp,fxy,fxxp,fxx,f] = stage2model(u, dec_l_hat, decision_func_to_use, ssvals_stage1);
 
