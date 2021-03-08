@@ -35,8 +35,8 @@ f_lhat_transition_function = lhatp - lhatplus;
 f = [f1;f2;f4;f5;f6;f7;f8;f10;f_Psi.';f_lhat_transition_function];
 
 x = [k Z Z1 Z2 Z3 P Psi lhat];
-y = [c stock];% phihat];
+y = [c stock];
 xp = [kp Zp Z1p Z2p Z3p Pp Psip lhatp];
-yp = [cp stockp];% phihatp];
+yp = [cp stockp];
 
 [fx,fxp,fy,fyp,fypyp,fypy,fypxp,fypx,fyyp,fyy,fyxp,fyx,fxpyp,fxpy,fxpxp,fxpx,fxyp,fxy,fxxp,fxx]=anal_deriv(f,x,y,xp,yp);
